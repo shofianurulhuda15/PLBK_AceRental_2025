@@ -56,8 +56,4 @@ Kami sangat menyambut kontribusi! Ikuti langkah berikut:
 Proyek ini dilisensikan di bawah Lisensi MIT. Lihat file [LICENSE](LICENSE) untuk detailnya.
 
 ## Kontak 📧
-Untuk pertanyaan atau dukungan, silakan buka issue di [repository GitHub](https://github.com/username-anda/sistem-penyewaan-playstation/issues) atau hubungi pengelola di `email.anda@contoh.com`.
-
-## Penghargaan 🌟
-- Terima kasih kepada tim xAI yang telah menyediakan bantuan AI Grok dalam pengembangan sistem ini.
-- Terinspirasi dari kebutuhan akan manajemen penyewaan yang efisien untuk bisnis kecil.
+Untuk pertanyaan atau dukungan, silakan buka issue di [repository GitHub](https://github.com/username-anda/sistem-penyewaan-playstation/issues) atau hubungi pengelola di `shofia_nh@mhs.usk.ac.id` atau `muhammad.bintang.indra@gmail.com`.
