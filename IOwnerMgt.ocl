@@ -1,0 +1,94 @@
+-- Invariant: dapatkanDataKeuangan mengembalikan data keuangan terakhir
+context IOwnerMgt
+inv dapatkanDataKeuangan: FinancialReport.allInstances()->asSequence()->last()->notEmpty()
+
+-- Invariant: dapatkanTransaksiBerdasarkanPeriode mengembalikan transaksi dalam periode
+context IOwnerMgt
+inv dapatkanTransaksiBerdasarkanPeriode: let report: FinancialReport = FinancialReport.allInstances()->asSequence()->last() in
+                                         RentalTransaction.allInstances()->select(t | t.startTime >= report.periodStart and t.startTime <= report.periodEnd)->asSet()
+                                         ->union(FoodBeverageTransaction.allInstances()->select(t | t.transactionTime >= report.periodStart and t.transactionTime <= report.periodEnd)->asSet())->notEmpty()
+
+-- Invariant: dapatkanPengeluaranBerdasarkanPeriode mengembalikan pengeluaran dalam periode
+context IOwnerMgt
+inv dapatkanPengeluaranBerdasarkanPeriode: let report: FinancialReport = FinancialReport.allInstances()->asSequence()->last() in
+                                           Expense.allInstances()->select(e | e.date >= report.periodStart and e.date <= report.periodEnd)->asSet()->notEmpty()
+
+-- Invariant: hitungPendapatan mengembalikan total pendapatan
+context IOwnerMgt
+inv hitungPendapatan: (RentalTransaction->collect(t: RentalTransaction | t.totalCost)->sum() +
+                       FoodBeverageTransaction->collect(t: FoodBeverageTransaction | t.totalCost)->sum()) >= 0
+
+-- Invariant: hitungKeuntungan mengembalikan keuntungan
+context IOwnerMgt
+inv hitungKeuntungan: let revenue: Real = RentalTransaction->collect(t: RentalTransaction | t.totalCost)->sum() +
+                                       FoodBeverageTransaction->collect(t: FoodBeverageTransaction | t.totalCost)->sum() in
+                      let expenses: Real = Expense->collect(e: Expense | e.amount)->sum() in
+                      revenue - expenses >= 0
+
+-- Invariant: kembalikandataLaporan mengembalikan laporan keuangan terakhir
+context IOwnerMgt
+inv kembalikandataLaporan: FinancialReport.allInstances()->asSequence()->last()->notEmpty()
+
+-- Invariant: tampilkanLaporanKeuangan mengembalikan laporan keuangan yang valid
+context IOwnerMgt
+inv tampilkanLaporanKeuangan: let report: FinancialReport = FinancialReport.allInstances()->asSequence()->last() in
+                              report.reportId = FinancialReport.reportId and
+                              report.period = FinancialReport.period and
+                              report.totalIncome = RentalTransaction->select(t: RentalTransaction | t.startTime >= report.periodStart and t.startTime <= report.periodEnd)->
+                                                  collect(t: RentalTransaction | t.totalCost)->sum() +
+                                                  FoodBeverageTransaction->select(t: FoodBeverageTransaction | t.transactionTime >= report.periodStart and t.transactionTime <= report.periodEnd)->
+                                                  collect(t: FoodBeverageTransaction | t.totalCost)->sum() and
+                              report.totalExpense = Expense->select(e: Expense | e.date >= report.periodStart and e.date <= report.periodEnd)->
+                                                   collect(e: Expense | e.amount)->sum() and
+                              report.profit = report.totalIncome - report.totalExpense and
+                              report.createdDate = DateTime(2025, 5, 30, 16, 34) and
+                              report.status = 'completed' and
+                              report.ownerId = Owner.ownerId
+
+-- Konteks: IOwnerMgt::tambahPengeluaran(dataPengeluaran: Expense, out pengeluaranId: String): Integer
+context IOwnerMgt::tambahPengeluaran(dataPengeluaran: Expense, out pengeluaranId: String): Integer
+pre:
+  -- Data pengeluaran harus valid
+  dataPengeluaran.amount > 0 and dataPengeluaran.description <> ''
+post:
+  -- A new Expense is created
+  Expense->exists(e: Expense | e.idExpense = pengeluaranId and e.amount = dataPengeluaran.amount and e.description = dataPengeluaran.description)
+  and result = 0 -- Success
+
+-- Invariant: validasiDataPengeluaran memvalidasi data pengeluaran
+context IOwnerMgt
+inv validasiDataPengeluaran: result = (dataPengeluaran.amount > 0 and dataPengeluaran.date <= DateTime(2025, 5, 30, 16, 34))
+
+-- Konteks: IOwnerMgt::masukkanPengeluaran(dataPengeluaran: Expense): Integer
+context IOwnerMgt::masukkanPengeluaran(dataPengeluaran: Expense): Integer
+pre:
+  -- Data pengeluaran harus valid
+  dataPengeluaran.amount > 0 and dataPengeluaran.date <= DateTime(2025, 5, 30, 16, 34)
+post:
+  -- Expense is added
+  Expense->exists(e: Expense | e.amount = dataPengeluaran.amount and e.date = dataPengeluaran.date and e.description = dataPengeluaran.description)
+  and result = 0 -- Success 
+
+-- Invariant: konfirmasiPengeluaranTersimpan mengembalikan pesan konfirmasi
+context IOwnerMgt
+inv konfirmasiPengeluaranTersimpan: result = 'Pengeluaran berhasil dicatat'
+
+-- Invariant: lihatRiwayatPengeluaran mengembalikan semua catatan pengeluaran
+context IOwnerMgt
+inv lihatRiwayatPengeluaran: Expense->asSet()->notEmpty()
+
+-- Invariant: dapatkanRiwayatPengeluaran mengembalikan semua catatan pengeluaran
+context IOwnerMgt
+inv dapatkanRiwayatPengeluaran: Expense->asSet()->notEmpty()
+
+-- Invariant: pilihPengeluaranUrutkanBerdasarkanTanggal mengembalikan pengeluaran yang diurutkan berdasarkan tanggal
+context IOwnerMgt
+inv pilihPengeluaranUrutkanBerdasarkanTanggal: Expense.allInstances()->asSequence()->sortedBy(e | e.date)->notEmpty()
+
+-- Invariant: kembalikanDaftarPengeluaran mengembalikan semua catatan pengeluaran
+context IOwnerMgt
+inv kembalikanDaftarPengeluaran: Expense->asSet()->notEmpty()
+
+-- Invariant: tampilkanRiwayatPengeluaran mengembalikan semua catatan pengeluaran
+context IOwnerMgt
+inv tampilkanRiwayatPengeluaran: Expense->asSet()->notEmpty()

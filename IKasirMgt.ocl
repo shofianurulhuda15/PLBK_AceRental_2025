@@ -1,0 +1,164 @@
+-- Konteks: PlayStationUnit
+context PlayStationUnit
+-- Invariant: Status unit hanya boleh "Available" atau "InUse"
+inv ValidStatus: status = 'Available' or status = 'InUse'
+-- Invariant: ID unit harus unik
+inv UniqueId: PlayStationUnit.allInstances()->isUnique(u | u.idUnit)
+
+-- Invariant: dapatkanUnitTersedia mengembalikan semua unit dengan status Available
+context IKasirMgt
+inv dapatkanUnitTersedia: PlayStationUnit.allInstances()->select(u | u.status = 'Available')->asSet()->notEmpty()
+
+-- Invariant: cariUnitTersedia mengembalikan unit dengan status Available
+context IKasirMgt
+inv cariUnitTersedia: PlayStationUnit.allInstances()->select(u | u.status = 'Available')->asSet()->notEmpty()
+
+-- Konteks: IKasirMgt::pilihUnit(status: String): PlayStationUnit
+context IKasirMgt::pilihUnit(status: String): PlayStationUnit
+pre:
+  -- Status harus Available
+  status = 'Available' and PlayStationUnit.allInstances()->exists(u | u.status = 'Available')
+post:
+  -- Returns a unit with status Available
+  PlayStationUnit.allInstances()->exists(u | u = result and u.status = 'Available')
+
+-- Invariant: tampilkanUnitTersedia mengembalikan semua unit dengan status Available
+context IKasirMgt
+inv tampilkanUnitTersedia: PlayStationUnit.allInstances()->select(u | u.status = 'Available')->asSet()->notEmpty()
+
+-- Invariant: tampilkandaftarUnit mengembalikan semua unit
+context IKasirMgt
+inv tampilkandaftarUnit: PlayStationUnit.allInstances()->asSet()->notEmpty()
+
+-- Konteks: IKasirMgt::pilihUnit(idUnit: String): PlayStationUnit
+context IKasirMgt::pilihUnit(idUnit: String): PlayStationUnit
+pre:
+  -- Unit harus ada dan statusnya Available
+  PlayStationUnit.allInstances()->exists(u | u.idUnit = idUnit and u.status = 'Available')
+post:
+  -- Returns the selected unit
+  PlayStationUnit.allInstances()->exists(u | u = result and u.idUnit = idUnit and u.status = 'Available')
+
+-- Konteks: IKasirMgt::mulaiSesiRental(idUnit: String): RentalTransaction
+context IKasirMgt::mulaiSesiRental(idUnit: String): RentalTransaction
+pre:
+  -- Unit harus ada dan statusnya Available
+  PlayStationUnit.allInstances()->exists(u | u.idUnit = idUnit and u.status = 'Available')
+post:
+  -- Creates a new rental transaction with start time
+  RentalTransaction.allInstances()->exists(t | t.idUnit = idUnit and t.startTime = DateTime(2025, 5, 30, 16, 24) and t = result)
+
+-- Konteks: IKasirMgt::perbaruiStatusUnit(idUnit: String, status: String): Integer
+context IKasirMgt::perbaruiStatusUnit(idUnit: String, status: String): Integer
+pre:
+  -- Unit harus ada dan status baru harus valid
+  PlayStationUnit.allInstances()->exists(u | u.idUnit = idUnit) and (status = 'Available' or status = 'InUse')
+post:
+  -- Status unit diperbarui
+  PlayStationUnit.allInstances()->exists(u | u.idUnit = idUnit and u.status = status) and result = 0
+
+-- Invariant: konfirmasiRentalDimulai mengembalikan pesan konfirmasi
+context IKasirMgt
+inv konfirmasiRentalDimulai: result = 'Sesi rental telah dimulai'
+
+-- Invariant: dapatkanUnitAktif mengembalikan semua unit dengan status InUse
+context IKasirMgt
+inv dapatkanUnitAktif: PlayStationUnit.allInstances()->select(u | u.status = 'InUse')->asSet()->notEmpty()
+
+-- Invariant: cariUnitAktif mengembalikan unit dengan status InUse
+context IKasirMgt
+inv cariUnitAktif: PlayStationUnit.allInstances()->select(u | u.status = 'InUse')->asSet()->notEmpty()
+
+-- Konteks: IKasirMgt::pilihUnit(status: String): PlayStationUnit
+context IKasirMgt::pilihUnit(status: String): PlayStationUnit
+pre:
+  -- Status harus InUse
+  status = 'InUse' and PlayStationUnit.allInstances()->exists(u | u.status = 'InUse')
+post:
+  -- Returns a unit with status InUse
+  PlayStationUnit.allInstances()->exists(u | u = result and u.status = 'InUse')
+
+-- Invariant: tampilkanUnitAktif mengembalikan semua unit dengan status InUse
+context IKasirMgt
+inv tampilkanUnitAktif: PlayStationUnit.allInstances()->select(u | u.status = 'InUse')->asSet()->notEmpty()
+
+-- Konteks: IKasirMgt::pilihUnitUntukDiakhiri(idUnit: String): PlayStationUnit
+context IKasirMgt::pilihUnitUntukDiakhiri(idUnit: String): PlayStationUnit
+pre:
+  -- Unit harus ada dan statusnya InUse
+  PlayStationUnit.allInstances()->exists(u | u.idUnit = idUnit and u.status = 'InUse')
+post:
+  -- Returns the selected unit
+  PlayStationUnit.allInstances()->exists(u | u = result and u.idUnit = idUnit and u.status = 'InUse')
+
+-- Invariant: konfirmasiAkhiriSesi mengembalikan nilai konfirmasi
+context IKasirMgt
+inv konfirmasiAkhiriSesi: result = true or result = false
+
+-- Konteks: IKasirMgt::hitungBiayaSesi(idUnit: String): Real
+context IKasirMgt::hitungBiayaSesi(idUnit: String): Real
+pre:
+  -- Unit harus memiliki transaksi rental yang aktif
+  RentalTransaction.allInstances()->exists(t | t.idUnit = idUnit and t.endTime = null)
+post:
+  -- Biaya dihitung berdasarkan durasi (Rp150/menit)
+  let transaction: RentalTransaction = RentalTransaction.allInstances()->select(t | t.idUnit = idUnit and t.endTime = null)->asSequence()->first() in
+  transaction.duration = (DateTime(2025, 5, 30, 16, 24) - transaction.startTime).minutes() and
+  result = transaction.duration * 150
+
+-- Konteks: IKasirMgt::simpanTransaksi(dataTransaksi: RentalTransaction): Integer
+context IKasirMgt::simpanTransaksi(dataTransaksi: RentalTransaction): Integer
+pre:
+  -- Data transaksi harus valid
+  dataTransaksi.idUnit <> '' and dataTransaksi.totalCost >= 0
+post:
+  -- Transaksi disimpan
+  RentalTransaction.allInstances()->exists(t | t = dataTransaksi) and result = 0
+
+-- Invariant: tampilkanTotalBiaya mengembalikan total cost sebagai string
+context IKasirMgt
+inv tampilkanTotalBiaya: result = jumlah.toString()
+
+-- Invariant: dapatkanItemMenu mengembalikan semua item menu
+context IKasirMgt
+inv dapatkanItemMenu: Item.allInstances()->asSet()->notEmpty()
+
+-- Invariant: pilihSemuaItemMenu mengembalikan semua item menu
+context IKasirMgt
+inv pilihSemuaItemMenu: Item.allInstances()->asSet()->notEmpty()
+
+-- Invariant: tampilkanMenu mengembalikan semua item menu
+context IKasirMgt
+inv tampilkanMenu: Item.allInstances()->asSet()->notEmpty()
+
+-- Konteks: IKasirMgt::tambahItemKeranjang(idItem: String, jumlah: Integer): Integer
+context IKasirMgt::tambahItemKeranjang(idItem: String, jumlah: Integer): Integer
+pre:
+  -- ID item harus valid dan jumlah harus positif
+  Item.allInstances()->exists(i | i.idItem = idItem) and jumlah > 0
+post:
+  -- Item ditambahkan ke keranjang
+  let transaction: FoodBeverageTransaction = FoodBeverageTransaction.allInstances()->asSequence()->last() in
+  transaction.items->exists(i | i.idItem = idItem and i.quantity = jumlah) and result = 0
+
+-- Invariant: hitungTotal mengembalikan total biaya transaksi makanan/minuman
+context IKasirMgt
+inv hitungTotal: let transaction: FoodBeverageTransaction = FoodBeverageTransaction.allInstances()->asSequence()->last() in
+                 transaction.totalCost = transaction.items->collect(i | i.price * i.quantity)->sum()
+
+-- Invariant: konfirmasiPembelian mengembalikan nilai konfirmasi
+context IKasirMgt
+inv konfirmasiPembelian: result = true or result = false
+
+-- Konteks: IKasirMgt::simpanTransaksiFB(dataTransaksi: FoodBeverageTransaction): Integer
+context IKasirMgt::simpanTransaksiFB(dataTransaksi: FoodBeverageTransaction): Integer
+pre:
+  -- Data transaksi harus valid
+  dataTransaksi.items->notEmpty() and dataTransaksi.totalCost >= 0
+post:
+  -- Transaksi disimpan
+  FoodBeverageTransaction.allInstances()->exists(t | t = dataTransaksi) and result = 0
+
+-- Invariant: tampilkanTotalBiaya mengembalikan total cost sebagai string
+context IKasirMgt
+inv tampilkanTotalBiaya: result = jumlah.toString()
